@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { validationResult, ValidationChain, body, query } from 'express-validator';
+import { validationResult } from 'express-validator';
+import { body, query, ValidationChain } from 'express-validator';
 import { logger } from '../utils/logger';
 
 /**
