@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { 
-  QuoteRequestParams
+  QuoteRequestParams,
+  SwapInstructionsRequest,
+  TokenInfo,
+  MintsInMarketResponse,
+  ProgramIdToLabelResponse
 } from '../interfaces/jupiter.interface';
 import { jupiterService } from '../services/jupiter.service';
 import { logger } from '../utils/logger';
@@ -52,9 +56,9 @@ class JupiterController {
   };
 
   /**
-   * Build a swap transaction
+   * Get a swap transaction
    */
-  public buildSwapTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getSwapTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Check for validation errors from express-validator
       const errors = validationResult(req);
@@ -80,13 +84,21 @@ class JupiterController {
         ...quoteParams 
       } = req.body;
 
-      logger.info(`Building swap transaction for user: ${userPublicKey}`);
+      if (!userPublicKey) {
+        res.status(400).json({
+          success: false,
+          message: 'userPublicKey is required',
+        });
+        return;
+      }
+
+      logger.info(`Getting swap transaction for user: ${userPublicKey}`);
       
       // First get the quote
       const quote = await jupiterService.getQuote(quoteParams as QuoteRequestParams);
       
-      // Then build the swap transaction
-      const swapTransaction = await jupiterService.buildSwapTransaction({
+      // Then get the swap transaction
+      const swapTransaction = await jupiterService.getSwapTransaction({
         quoteResponse: quote,
         userPublicKey,
         wrapAndUnwrapSol,
@@ -103,45 +115,241 @@ class JupiterController {
         data: swapTransaction,
       });
     } catch (error) {
-      logger.error('Failed to build swap transaction:', error);
+      logger.error('Failed to get swap transaction:', error);
       next(error);
     }
   };
 
   /**
-   * Get supported tokens
+   * Get swap instructions for a quote
+   */
+  public getSwapInstructions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Check for validation errors from express-validator
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        logger.warn('Validation failed', { errors: errors.array() });
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+        return;
+      }
+
+      const { 
+        userPublicKey, 
+        wrapAndUnwrapSol,
+        ...quoteParams 
+      } = req.body;
+
+      if (!userPublicKey) {
+        res.status(400).json({
+          success: false,
+          message: 'userPublicKey is required',
+        });
+        return;
+      }
+
+      logger.info(`Getting swap instructions for user: ${userPublicKey}`);
+      
+      // First get the quote
+      const quote = await jupiterService.getQuote(quoteParams as QuoteRequestParams);
+      
+      // Then get the swap instructions
+      const swapInstructions = await jupiterService.getSwapInstructions({
+        quoteResponse: quote,
+        userPublicKey,
+        wrapAndUnwrapSol,
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: swapInstructions,
+      });
+    } catch (error) {
+      logger.error('Failed to get swap instructions:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get program ID to label mapping
+   */
+  public getProgramIdToLabel = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      logger.info('Fetching program ID to label mapping');
+      
+      const programIdToLabel = await jupiterService.getProgramIdToLabel();
+      
+      res.status(200).json({
+        success: true,
+        data: programIdToLabel,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch program ID to label mapping:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get token information
+   */
+  public getTokenInfo = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { mintAddress } = req.params;
+      
+      if (!mintAddress) {
+        res.status(400).json({
+          success: false,
+          message: 'mintAddress is required',
+        });
+        return;
+      }
+
+      logger.info(`Fetching token info for mint: ${mintAddress}`);
+      
+      const tokenInfo = await jupiterService.getTokenInfo(mintAddress);
+      
+      res.status(200).json({
+        success: true,
+        data: tokenInfo,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch token info:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get mints in market
+   */
+  public getMintsInMarket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { inputMint, outputMint, amount } = req.query;
+      
+      if (!inputMint || !outputMint || !amount) {
+        res.status(400).json({
+          success: false,
+          message: 'inputMint, outputMint, and amount are required',
+        });
+        return;
+      }
+
+      logger.info(`Fetching mints in market: ${inputMint} -> ${outputMint} (${amount})`);
+      
+      const mintsInMarket = await jupiterService.getMintsInMarket(
+        inputMint as string,
+        outputMint as string,
+        amount as string
+      );
+      
+      res.status(200).json({
+        success: true,
+        data: mintsInMarket,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch mints in market:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get tradable tokens
+   */
+  public getTradableTokens = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      logger.info('Fetching tradable tokens');
+      
+      const tradableTokens = await jupiterService.getTradableTokens();
+      
+      res.status(200).json({
+        success: true,
+        data: tradableTokens,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch tradable tokens:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get tagged tokens
+   */
+  public getTaggedTokens = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tags } = req.query;
+      
+      if (!tags) {
+        res.status(400).json({
+          success: false,
+          message: 'tags are required',
+        });
+        return;
+      }
+
+      const tagsArray = (tags as string).split(',');
+      logger.info(`Fetching tagged tokens with tags: ${tagsArray.join(', ')}`);
+      
+      const taggedTokens = await jupiterService.getTaggedTokens(tagsArray);
+      
+      res.status(200).json({
+        success: true,
+        data: taggedTokens,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch tagged tokens:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get new tokens
+   */
+  public getNewTokens = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      logger.info('Fetching new tokens');
+      
+      const newTokens = await jupiterService.getNewTokens();
+      
+      res.status(200).json({
+        success: true,
+        data: newTokens,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch new tokens:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get all tokens with metadata
+   */
+  public getAllTokens = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      logger.info('Fetching all tokens');
+      
+      const allTokens = await jupiterService.getAllTokens();
+      
+      res.status(200).json({
+        success: true,
+        data: allTokens,
+      });
+    } catch (error) {
+      logger.error('Failed to fetch all tokens:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Get supported tokens (legacy method)
+   * @deprecated Use getAllTokens instead
    */
   public getTokens = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       logger.info('Fetching supported tokens');
       
-      // This is a placeholder. In a real implementation, you would fetch this from Jupiter's API
-      // const tokens = await jupiterService.getSupportedTokens();
-      
-      // For now, return some common tokens
-      const tokens = [
-        {
-          address: 'So11111111111111111111111111111111111111112', // SOL
-          symbol: 'SOL',
-          name: 'Solana',
-          decimals: 9,
-          logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-        },
-        {
-          address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-          symbol: 'USDC',
-          name: 'USD Coin',
-          decimals: 6,
-          logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
-        },
-        {
-          address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
-          symbol: 'USDT',
-          name: 'Tether USD',
-          decimals: 6,
-          logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg',
-        },
-      ];
+      const tokens = await jupiterService.getTokens();
       
       res.status(200).json({
         success: true,

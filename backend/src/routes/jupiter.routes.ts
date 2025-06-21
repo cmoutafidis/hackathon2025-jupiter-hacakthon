@@ -4,6 +4,50 @@ import { validate, validationRules } from '../middleware/validation.middleware';
 
 const router = Router();
 
+// Validation schemas
+const jupiterValidation = {
+  getQuote: [
+    validationRules.requiredString('inputMint'),
+    validationRules.requiredString('outputMint'),
+    validationRules.requiredString('amount'),
+    validationRules.optionalNumber('slippageBps'),
+    validationRules.optionalBoolean('restrictIntermediateTokens'),
+    validationRules.optionalString('swapMode'),
+    validationRules.optionalNumber('feeBps'),
+    validationRules.optionalBoolean('onlyDirectRoutes'),
+    validationRules.optionalBoolean('asLegacyTransaction'),
+    validationRules.optionalNumber('maxAccounts'),
+  ],
+  getSwapTransaction: [
+    validationRules.requiredString('userPublicKey'),
+    validationRules.requiredString('inputMint'),
+    validationRules.requiredString('outputMint'),
+    validationRules.requiredString('amount'),
+    validationRules.optionalBoolean('wrapAndUnwrapSol'),
+    validationRules.optionalNumber('prioritizationFeeLamports'),
+    validationRules.optionalBoolean('asLegacyTransaction'),
+    validationRules.optionalBoolean('useSharedAccounts'),
+    validationRules.optionalNumber('computeUnitPriceMicroLamports'),
+    validationRules.optionalBoolean('useVersionedTransaction'),
+    validationRules.optionalBoolean('asLegacyTransactionIfUnsupported'),
+  ],
+  getSwapInstructions: [
+    validationRules.requiredString('userPublicKey'),
+    validationRules.requiredString('inputMint'),
+    validationRules.requiredString('outputMint'),
+    validationRules.requiredString('amount'),
+    validationRules.optionalBoolean('wrapAndUnwrapSol'),
+  ],
+  getMintsInMarket: [
+    validationRules.requiredString('inputMint'),
+    validationRules.requiredString('outputMint'),
+    validationRules.requiredString('amount'),
+  ],
+  getTaggedTokens: [
+    validationRules.requiredString('tags'),
+  ],
+};
+
 /**
  * @swagger
  * /api/jupiter/quote:

@@ -19,6 +19,13 @@ interface Config {
   // CORS
   CORS_ORIGIN: string;
   
+  // Jupiter API
+  jupiter: {
+    apiKey?: string;
+    apiBaseUrl: string;
+    tokenApiBaseUrl: string;
+  };
+  
   // Add other configuration properties here as needed
 }
 
@@ -34,11 +41,11 @@ if (missingEnvVars.length > 0) {
   throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
 }
 
-// Build the configuration object
+// Create and validate configuration
 const config: Config = {
   // Server
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '5000', 10),
+  PORT: parseInt(process.env.PORT || '3000', 10),
   
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
@@ -49,7 +56,12 @@ const config: Config = {
   // CORS
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   
-  // Add other configuration properties here as needed
+  // Jupiter API
+  jupiter: {
+    apiKey: process.env.JUPITER_API_KEY,
+    apiBaseUrl: process.env.JUPITER_API_BASE_URL || 'https://quote-api.jup.ag/v6',
+    tokenApiBaseUrl: process.env.JUPITER_TOKEN_API_BASE_URL || 'https://token-api.jup.ag',
+  },
 };
 
 // Validate configuration
