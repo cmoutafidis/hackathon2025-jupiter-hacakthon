@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useWallet } from "@/contexts/WalletContext"
 import Link from 'next/link'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { Menu, X, ArrowRight, Zap, Shield, TrendingUp, BarChart3, Cpu, Globe, Sparkles, ChevronDown, Twitter, Github, Play, Users, Award, Target, Eye, Brain } from 'lucide-react'
+import { Menu, X, ArrowRight, Zap, Shield, TrendingUp, BarChart3, Cpu, Globe, Sparkles, ChevronDown, Play, Users, Award, Target, Eye, Brain } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {NovexFooter} from './NovexFooter'
@@ -86,7 +86,7 @@ const NovexLanding = () => {
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
               <Sparkles className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-medium">Exclusively for Solana</span>
+              <span className="text-sm font-medium">Exclusively for Jupiter</span>
             </motion.div>
 
             <motion.h1 

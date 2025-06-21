@@ -64,23 +64,7 @@ export const NovexFooter = () => {
               </ul>
             </motion.div>
   
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              <h3 className="text-sm font-semibold text-white dark:text-gray-100 mb-3">Legal</h3>
-              <ul className="space-y-2 text-sm">
-                {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item, index) => (
-                  <li key={index}>
-                    <Link href="#" className="text-gray-400 dark:text-gray-300 hover:text-purple-400 dark:hover:text-purple-300 transition-colors">
-                      {item}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+
           </div>
   
           <motion.div
@@ -91,7 +75,7 @@ export const NovexFooter = () => {
             transition={{ duration: 0.8 }}
           >
             <p className="text-center text-xs text-gray-400 dark:text-gray-300">
-              © {new Date().getFullYear()} Novex. All rights reserved. Created for the OKX Solana Accelerate Hackathon 2025.
+              © {new Date().getFullYear()} Novex. All rights reserved. Created for the Jupiter Hackathon 2025.
             </p>
           </motion.div>
         </div>

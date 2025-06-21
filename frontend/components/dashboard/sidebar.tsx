@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -71,6 +72,14 @@ export function DashboardSidebar({ open, setOpen }: DashboardSidebarProps) {
       href: "/dashboard/portfolio",
       gradient: "from-purple-500 to-cyan-400"
     },
+
+    {
+      label: "Social Feed",
+      icon: BarChart2,
+      href: "/dashboard/social-feed",
+      gradient: "from-purple-500 to-cyan-400"
+    },
+
   ]
 
   const copyWalletAddress = async () => {

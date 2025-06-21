@@ -7,6 +7,8 @@ const ai = new GoogleGenAI({
   apiKey: process.env.NEXT_PUBLIC_GEMINI_KEY,
 });
 
+console.log("my gemini key is:::",process.env.NEXT_PUBLIC_GEMINI_KEY);
+
 const GEMINI_PROMPT_TEMPLATE = `
 You are a blockchain data assistant knowledgeable about supported chains, token prices, trades, candlestick data, historical candlestick data, token index prices, historical index prices, total values, and token balances. You respond in JSON format with clearly defined types for each response.
 

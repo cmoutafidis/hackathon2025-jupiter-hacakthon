@@ -1181,7 +1181,7 @@ export default function EnhancedSolanaSwap() {
           className="mt-5 text-center"
         >
           <p className="text-xs text-white/40">
-            Powered by OKX DEX Aggregator on Solana. Best rates across all Solana DEXs.
+            Powered by Jupiter. Best rates across all Solana DEXs.
           </p>
         </motion.div>
       </div>
