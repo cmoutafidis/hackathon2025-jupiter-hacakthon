@@ -9,7 +9,7 @@ frontend/.pnp
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
+node_modules
 # testing
 frontend/coverage
 
@@ -39,3 +39,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+node_modules
