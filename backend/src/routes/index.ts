@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import exampleRoutes from './example.routes';
 import jupiterRoutes from './jupiter.routes';
 
 const router = Router();
@@ -8,7 +7,6 @@ const router = Router();
  * API Routes
  * All routes are prefixed with /api
  */
-router.use('/examples', exampleRoutes);
 router.use('/jupiter', jupiterRoutes);
 
 // Health check endpoint
