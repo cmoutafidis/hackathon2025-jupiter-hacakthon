@@ -83,6 +83,7 @@ when you returnning the token  name then only return   ETH,
   SOL,
   SUI,
   TON,
+  JUP
 these when matches
 if any general query  is asked then pick the above mentioned conditions and find most suitable return the type with data which matches most  from that if it matches and else general answer.
 
