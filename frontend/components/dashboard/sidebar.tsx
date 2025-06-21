@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from "next/link"
@@ -19,9 +18,14 @@ import {
   LogOut,
   Copy,
   Bell,
-  Brain
+  Brain,
+  BrainCircuit,
+  Globe,
+  Newspaper
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from '../ui/button'
+import { ConnectWalletButton } from '../ui/connect-wallet-button'
 
 interface DashboardSidebarProps {
   open: boolean
@@ -72,14 +76,12 @@ export function DashboardSidebar({ open, setOpen }: DashboardSidebarProps) {
       href: "/dashboard/portfolio",
       gradient: "from-purple-500 to-cyan-400"
     },
-
     {
       label: "Social Feed",
-      icon: BarChart2,
+      icon: Newspaper,
       href: "/dashboard/social-feed",
       gradient: "from-purple-500 to-cyan-400"
     },
-
   ]
 
   const copyWalletAddress = async () => {
