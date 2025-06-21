@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -24,6 +23,11 @@ interface Config {
     apiKey?: string;
     apiBaseUrl: string;
     tokenApiBaseUrl: string;
+  };
+  
+  // Solana RPC
+  solana: {
+    rpcUrl?: string;
   };
   
   // Add other configuration properties here as needed
@@ -61,6 +65,11 @@ const config: Config = {
     apiKey: process.env.JUPITER_API_KEY,
     apiBaseUrl: process.env.JUPITER_API_BASE_URL || 'https://quote-api.jup.ag/v6',
     tokenApiBaseUrl: process.env.JUPITER_TOKEN_API_BASE_URL || 'https://token-api.jup.ag',
+  },
+  
+  // Solana RPC
+  solana: {
+    rpcUrl: process.env.SOLANA_RPC_URL,
   },
 };
 

@@ -1,16 +1,51 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { 
-  QuoteRequestParams,
-  SwapInstructionsRequest,
-  TokenInfo,
-  MintsInMarketResponse,
-  ProgramIdToLabelResponse
-} from '../interfaces/jupiter.interface';
+import { QuoteRequestParams, PriceRequestParams } from '../interfaces/jupiter.interface';
 import { jupiterService } from '../services/jupiter.service';
 import { logger } from '../utils/logger';
 
 class JupiterController {
+  /**
+   * Get price information for a token swap
+   */
+  public getPrice = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Check for validation errors from express-validator
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        logger.warn('Price validation failed', { errors: errors.array() });
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+        return;
+      }
+
+      const priceParams: PriceRequestParams = {
+        inputMint: req.query.inputMint as string,
+        outputMint: req.query.outputMint as string,
+        amount: req.query.amount as string,
+        slippageBps: req.query.slippageBps ? Number(req.query.slippageBps) : undefined,
+        onlyDirectRoutes: req.query.onlyDirectRoutes === 'true',
+        includeDetailedRoutes: req.query.includeDetailedRoutes === 'true',
+        includeRoutePlan: req.query.includeRoutePlan === 'true',
+      };
+
+      logger.info(`Fetching price: ${priceParams.inputMint} -> ${priceParams.outputMint} (${priceParams.amount})`);
+      
+      const price = await jupiterService.getPrice(priceParams);
+      
+      res.status(200).json({
+        success: true,
+        data: price,
+      });
+    } catch (error) {
+      logger.error('Failed to get price:', error);
+      next(error);
+    }
+  };
+
   /**
    * Get a quote for a token swap
    */
@@ -357,6 +392,57 @@ class JupiterController {
       });
     } catch (error) {
       logger.error('Failed to fetch supported tokens:', error);
+      next(error);
+    }
+  };
+
+  /**
+   * Send a signed transaction to the Solana network
+   */
+  public sendTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Check for validation errors from express-validator
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        logger.warn('Validation failed', { errors: errors.array() });
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+        return;
+      }
+
+      const { 
+        signedTransaction, 
+        skipPreflight, 
+        maxRetries, 
+        commitment 
+      } = req.body;
+
+      if (!signedTransaction) {
+        res.status(400).json({
+          success: false,
+          message: 'signedTransaction is required',
+        });
+        return;
+      }
+
+      logger.info('Sending transaction to Solana network');
+      
+      const result = await jupiterService.sendTransaction({
+        signedTransaction,
+        skipPreflight,
+        maxRetries,
+        commitment,
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Failed to send transaction:', error);
       next(error);
     }
   };

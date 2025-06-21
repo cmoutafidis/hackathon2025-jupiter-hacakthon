@@ -31,8 +31,62 @@ export const validate = (validations: ValidationChain[]) => {
   };
 };
 
-// Common validation rules
+// Helper functions for validation rules
 export const validationRules = {
+  // Common validation chains
+  requiredString: (field: string) => 
+    body(field)
+      .isString()
+      .withMessage(`${field} must be a string`)
+      .notEmpty()
+      .withMessage(`${field} is required`),
+      
+  requiredQueryString: (field: string) =>
+    query(field)
+      .isString()
+      .withMessage(`${field} must be a string`)
+      .notEmpty()
+      .withMessage(`${field} is required`),
+      
+  optionalString: (field: string) =>
+    body(field)
+      .optional()
+      .isString()
+      .withMessage(`${field} must be a string`),
+      
+  optionalQueryString: (field: string) =>
+    query(field)
+      .optional()
+      .isString()
+      .withMessage(`${field} must be a string`),
+      
+  requiredNumber: (field: string) =>
+    body(field)
+      .isNumeric()
+      .withMessage(`${field} must be a number`)
+      .notEmpty()
+      .withMessage(`${field} is required`),
+      
+  optionalNumber: (field: string) =>
+    body(field)
+      .optional()
+      .isNumeric()
+      .withMessage(`${field} must be a number`),
+      
+  requiredBoolean: (field: string) =>
+    body(field)
+      .isBoolean()
+      .withMessage(`${field} must be a boolean`)
+      .notEmpty()
+      .withMessage(`${field} is required`),
+      
+  optionalBoolean: (field: string) =>
+    body(field)
+      .optional()
+      .isBoolean()
+      .withMessage(`${field} must be a boolean`),
+
+  // Route-specific validation chains
   getQuote: [
     query('inputMint')
       .isString()
@@ -48,6 +102,7 @@ export const validationRules = {
       .isString()
       .withMessage('amount must be a string')
       .notEmpty()
+      .withMessage('amount is required')
       .withMessage('amount is required')
       .matches(/^\d+$/)
       .withMessage('amount must be a valid number string'),

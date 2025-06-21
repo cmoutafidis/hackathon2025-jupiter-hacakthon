@@ -64,6 +64,65 @@ export interface SwapTransactionResponse {
   swapTransaction: string;
   lastValidBlockHeight: number;
   prioritizationFeeLamports: number;
+  computeUnitLimit?: number;
+  prioritizationType?: {
+    computeBudget?: {
+      microLamports: number;
+      estimatedMicroLamports: number;
+    };
+  };
+  dynamicSlippageReport?: {
+    slippageBps: number;
+    otherAmount: number;
+    simulatedIncurredSlippageBps: number;
+    amplificationRatio: string;
+    categoryName: string;
+    heuristicMaxSlippageBps: number;
+  };
+  simulationError?: any;
+}
+
+export interface SendTransactionRequest {
+  /** Base64 encoded serialized transaction */
+  signedTransaction: string;
+  
+  /** 
+   * Maximum number of times for the RPC node to retry sending the transaction if it is not confirmed.
+   * @default 0
+   */
+  maxRetries?: number;
+  
+  /** 
+   * If true, skip preflight transaction checks.
+   * @default false
+   */
+  skipPreflight?: boolean;
+  
+  /** 
+   * Commitment level for transaction confirmation.
+   * @default 'confirmed'
+   */
+  commitment?: 'processed' | 'confirmed' | 'finalized';
+}
+
+export interface SendTransactionResponse {
+  /** Transaction signature as base-58 encoded string */
+  signature: string;
+  
+  /** Block height at which the transaction was confirmed */
+  slot: number;
+  
+  /** Error if transaction failed, null if successful */
+  err: any | null;
+  
+  /** Transaction metadata */
+  memo: string | null;
+  
+  /** The unix timestamp of when the transaction was processed */
+  blockTime: number | null;
+  
+  /** Transaction confirmation status */
+  confirmationStatus: 'processed' | 'confirmed' | 'finalized' | null;
 }
 
 export interface SwapInstructionsRequest {
@@ -154,6 +213,156 @@ export interface NewTokensResponse {
 
 export interface AllTokensResponse {
   [mint: string]: TokenInfo;
+}
+
+/**
+ * Price API Types
+ */
+
+export interface PriceRequestParams {
+  /**
+   * Token mint address or 'SOL' for native SOL
+   */
+  inputMint: string;
+  
+  /**
+   * Token mint address or 'SOL' for native SOL
+   */
+  outputMint: string;
+  
+  /**
+   * Amount of input token to price, in token's smallest unit (e.g., lamports for SOL, 6 decimals for USDC)
+   */
+  amount: string | number;
+  
+  /**
+   * Slippage in basis points (1 = 0.01%)
+   * @default 50
+   */
+  slippageBps?: number;
+  
+  /**
+   * Whether to only consider direct routes (no hops)
+   * @default false
+   */
+  onlyDirectRoutes?: boolean;
+  
+  /**
+   * Whether to include detailed route information in the response
+   * @default false
+   */
+  includeDetailedRoutes?: boolean;
+  
+  /**
+   * Whether to include the full route plan in the response
+   * @default false
+   */
+  includeRoutePlan?: boolean;
+}
+
+export interface PriceResponse {
+  /**
+   * Input token mint address
+   */
+  inputMint: string;
+  
+  /**
+   * Output token mint address
+   */
+  outputMint: string;
+  
+  /**
+   * Amount of input token being swapped
+   */
+  inAmount: string;
+  
+  /**
+   * Expected amount of output token to receive
+   */
+  outAmount: string;
+  
+  /**
+   * Price impact percentage (e.g., '0.05' for 0.05%)
+   */
+  priceImpactPct: string;
+  
+  /**
+   * Estimated price per output token in terms of input token
+   */
+  price: string;
+  
+  /**
+   * Estimated price per input token in terms of output token
+   */
+  inversePrice: string;
+  
+  /**
+   * List of market IDs used in the route
+   */
+  marketInfos: Array<{
+    id: string;
+    label: string;
+    inputMint: string;
+    outputMint: string;
+    inAmount: string;
+    outAmount: string;
+    minInAmount?: string;
+    minOutAmount?: string;
+    notEnoughLiquidity: boolean;
+    priceImpactPct: string;
+  }>;
+  
+  /**
+   * Detailed route information if requested
+   */
+  routePlan?: Array<{
+    swapInfo: {
+      ammKey: string;
+      label: string;
+      inputMint: string;
+      outputMint: string;
+      inAmount: string;
+      outAmount: string;
+      feeAmount: string;
+      feeMint: string;
+    };
+    percent: number;
+  }>;
+  
+  /**
+   * Estimated network fees in SOL
+   */
+  fees: {
+    /**
+     * Estimated transaction fee in SOL
+     */
+    transactionFee: string;
+    
+    /**
+     * Estimated priority fee in SOL (if applicable)
+     */
+    priorityFee?: string;
+    
+    /**
+     * Estimated total fee in SOL
+     */
+    totalFee: string;
+  };
+  
+  /**
+   * Timestamp of when the price was calculated
+   */
+  timestamp: string;
+  
+  /**
+   * Context slot at which the price was calculated
+   */
+  contextSlot: number;
+  
+  /**
+   * Time taken to calculate the price in milliseconds
+   */
+  timeTaken: number;
 }
 
 /**

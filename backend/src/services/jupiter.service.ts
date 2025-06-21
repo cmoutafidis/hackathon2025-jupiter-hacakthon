@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import config from '../config';
 import { logger } from '../utils/logger';
 import {
@@ -17,6 +17,10 @@ import {
   NewTokensResponse,
   AllTokensResponse,
   JupiterErrorResponse,
+  SendTransactionRequest,
+  SendTransactionResponse,
+  PriceRequestParams,
+  PriceResponse,
 } from '../interfaces/jupiter.interface';
 
 /**
@@ -251,14 +255,30 @@ class JupiterService {
 
   /**
    * Get newly added tokens
-   * @returns Promise with new tokens response
+   * @returns Promise with new tokens mapped to TokenInfo format
    */
   public async getNewTokens(): Promise<Record<string, TokenInfo>> {
     try {
       const response = await axios.get<NewTokensResponse>(
         `${this.tokenBaseURL}/new`
       );
-      return response.data;
+      
+      // Map the response to match TokenInfo interface
+      const tokens: Record<string, TokenInfo> = {};
+      
+      for (const [mint, tokenData] of Object.entries(response.data)) {
+        tokens[mint] = {
+          address: tokenData.mint,
+          chainId: 101, // Mainnet
+          name: tokenData.name,
+          symbol: tokenData.symbol,
+          decimals: tokenData.decimals,
+          logoURI: tokenData.logoURI,
+          tags: tokenData.tags || []
+        };
+      }
+      
+      return tokens;
     } catch (error) {
       this.handleError(error, 'Failed to get new tokens');
       throw error;
@@ -286,13 +306,265 @@ class JupiterService {
    * @deprecated Use getAllTokens() instead
    * @returns Promise with list of tokens
    */
-  public async getTokens(): Promise<TokenInfo[]> {
+  public async getTokens(): Promise<TokenInfo[] | undefined> {
     try {
-      const allTokens = await this.getAllTokens();
-      return Object.values(allTokens);
+      const response = await this.client.get<TokenInfo[]>('/tokens');
+      return response.data;
     } catch (error) {
-      this.handleError(error, 'Failed to get tokens');
-      throw error;
+      this.handleError(error, 'Failed to fetch supported tokens');
+      return undefined;
+    }
+  }
+
+  /**
+   * Send a signed transaction to the Solana network
+   * @param params Send transaction parameters
+   * @returns Transaction signature and confirmation details
+   */
+  public async sendTransaction(params: SendTransactionRequest): Promise<SendTransactionResponse | undefined> {
+    try {
+      // Use the RPC endpoint from config or fallback to a public endpoint
+      const rpcUrl = config.solana.rpcUrl || 'https://api.mainnet-beta.solana.com';
+      
+      // Create a new axios instance for the RPC call
+      const rpcClient = axios.create({
+        baseURL: rpcUrl,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000, // 30 seconds
+      });
+
+      // Decode the base64 transaction
+      const signedTransaction = Buffer.from(params.signedTransaction, 'base64');
+      
+      // Prepare the RPC request
+      const rpcRequest = {
+        jsonrpc: '2.0',
+        id: '1',
+        method: 'sendTransaction',
+        params: [
+          signedTransaction.toString('base64'),
+          {
+            encoding: 'base64',
+            skipPreflight: params.skipPreflight || false,
+            maxRetries: params.maxRetries || 0,
+            preflightCommitment: params.commitment || 'confirmed',
+          },
+        ],
+      };
+
+      logger.debug('Sending transaction to Solana RPC', {
+        method: 'sendTransaction',
+        skipPreflight: params.skipPreflight,
+        maxRetries: params.maxRetries,
+        commitment: params.commitment,
+      });
+
+      // Send the transaction
+      const response = await rpcClient.post<{
+        jsonrpc: string;
+        result: string;
+        id: string;
+      }>('', rpcRequest);
+
+      if (!response.data || !response.data.result) {
+        throw new Error('Invalid response from Solana RPC');
+      }
+
+      const signature = response.data.result;
+
+      // Wait for confirmation if needed
+      if (params.commitment && params.commitment !== 'processed') {
+        return await this.confirmTransaction(signature, params.commitment);
+      }
+
+      return {
+        signature,
+        slot: 0, // Will be updated in confirmTransaction
+        err: null,
+        memo: null,
+        blockTime: null,
+        confirmationStatus: 'processed' as const,
+      };
+    } catch (error) {
+      this.handleError(error, 'Failed to send transaction');
+      return undefined;
+    }
+  }
+
+  /**
+   * Confirm a transaction
+   * @param signature Transaction signature
+   * @param commitment Commitment level
+   * @returns Transaction confirmation details
+   */
+  private async confirmTransaction(
+    signature: string,
+    commitment: 'confirmed' | 'finalized' = 'confirmed'
+  ): Promise<SendTransactionResponse | undefined> {
+    try {
+      const rpcUrl = config.solana.rpcUrl || 'https://api.mainnet-beta.solana.com';
+      
+      const rpcClient = axios.create({
+        baseURL: rpcUrl,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000, // 60 seconds for confirmation
+      });
+
+      // Wait for confirmation
+      const confirmRequest = {
+        jsonrpc: '2.0',
+        id: '1',
+        method: 'getSignatureStatuses',
+        params: [
+          [signature],
+          {
+            searchTransactionHistory: true,
+          },
+        ],
+      };
+
+      // Poll for confirmation (simplified - in production, you might want to implement proper polling with timeouts)
+      let attempts = 0;
+      const maxAttempts = 30; // ~30 seconds with 1s delay
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        
+        const response = await rpcClient.post<{
+          jsonrpc: string;
+          result: {
+            value: Array<{
+              slot: number;
+              confirmations: number | null;
+              err: any;
+              confirmationStatus: 'processed' | 'confirmed' | 'finalized' | null;
+            }>;
+          };
+          id: string;
+        }>('', confirmRequest);
+
+        const status = response.data.result?.value?.[0];
+        
+        if (status) {
+          if (status.err) {
+            return {
+              signature,
+              slot: status.slot,
+              err: status.err,
+              memo: null,
+              blockTime: null,
+              confirmationStatus: status.confirmationStatus || 'processed',
+            };
+          }
+
+          // Check if the transaction has reached the desired commitment level
+          if (status.confirmationStatus === commitment || 
+              (commitment === 'confirmed' && status.confirmationStatus === 'finalized')) {
+            
+            // Get the transaction details for blockTime and memo
+            const txDetails = await this.getTransactionDetails(signature, commitment);
+            
+            return {
+              signature,
+              slot: status.slot,
+              err: null,
+              memo: txDetails?.memo || null,
+              blockTime: txDetails?.blockTime || null,
+              confirmationStatus: status.confirmationStatus,
+            };
+          }
+        }
+        
+        attempts++;
+      }
+
+      throw new Error(`Transaction not confirmed after ${maxAttempts} seconds`);
+    } catch (error) {
+      this.handleError(error, 'Failed to confirm transaction');
+      return undefined;
+    }
+  }
+
+  /**
+   * Get transaction details
+   * @param signature Transaction signature
+   * @param commitment Commitment level
+   * @returns Transaction details including block time and memo
+   */
+  private async getTransactionDetails(
+    signature: string,
+    commitment: 'confirmed' | 'finalized' = 'confirmed'
+  ): Promise<{ blockTime: number | null; memo: string | null }> {
+    try {
+      const rpcUrl = config.solana.rpcUrl || 'https://api.mainnet-beta.solana.com';
+      
+      const rpcClient = axios.create({
+        baseURL: rpcUrl,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 seconds
+      });
+
+      const request = {
+        jsonrpc: '2.0',
+        id: '1',
+        method: 'getTransaction',
+        params: [
+          signature,
+          {
+            encoding: 'json',
+            commitment,
+            maxSupportedTransactionVersion: 0,
+          },
+        ],
+      };
+
+      const response = await rpcClient.post<{
+        jsonrpc: string;
+        result: {
+          slot: number;
+          blockTime: number | null;
+          meta: {
+            logMessages: string[];
+            err: any;
+          };
+        } | null;
+        id: string;
+      }>('', request);
+
+      if (!response.data.result) {
+        return { blockTime: null, memo: null };
+      }
+
+      // Extract memo from log messages if available
+      let memo: string | null = null;
+      const memoLog = response.data.result.meta?.logMessages?.find(msg => 
+        msg.includes('Program log: Memo: {')
+      );
+      
+      if (memoLog) {
+        try {
+          const memoJson = memoLog.replace('Program log: Memo: ', '');
+          const memoObj = JSON.parse(memoJson);
+          memo = memoObj.memo || null;
+        } catch (e) {
+          // If parsing fails, use the raw log
+          memo = memoLog;
+        }
+      }
+
+      return {
+        blockTime: response.data.result.blockTime,
+        memo,
+      };
+    } catch (error) {
+      logger.warn('Failed to get transaction details', { error });
+      return { blockTime: null, memo: null };
     }
   }
 
