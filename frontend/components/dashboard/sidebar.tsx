@@ -41,6 +41,8 @@ const truncateAddress = (address?: string | null) => {
 
 export function DashboardSidebar({ open, setOpen }: DashboardSidebarProps) {
   const { connectWallet, disconnectWallet, connected, connecting,publicKey } = useWallet()
+  console.log("connectwallet is here",connectWallet);
+
 
   const pathname = usePathname()
   const [copiedAddress, setCopiedAddress] = useState(false)

@@ -1186,7 +1186,7 @@ export default function DashboardPage() {
               <Button variant="outline" size="sm" className="border-white/20 bg-blue-900/20 hover:bg-white/10 text-white">
                 Value
               </Button>
-              <Button variant="outline" size="sm" className="border-white/20 bg-blue-900/20 bg-white/10 text-white">
+              <Button variant="outline" size="sm" className="border-white/20  bg-white/10 text-white">
                 Balance
               </Button>
             </div>
